@@ -11,7 +11,10 @@ num_kenyon - number of rows in the matrix
 Output: Projection matrix
 '''
 def create_projection_matrix(odor_space, num_kenyon, projection):
-	i = odor_space.shape[1]
+	if type(odor_space) == int:
+		i = odor_space
+	else:
+		i = odor_space.shape[1]
 	j = num_kenyon
 
 	M = np.zeros((j,i))
@@ -22,7 +25,7 @@ def create_projection_matrix(odor_space, num_kenyon, projection):
 	elif projection.startswith("SB"):
 		num_sample = int(projection[2:])  # SB6 -> 6
 		for row in range(0,j):
-			idx = random.sample(range(1,i), num_sample) 
+			idx = random.sample(range(0,i), num_sample) 
 			M[row,idx] = 1
 
 			assert sum(M[row,:]) == num_sample
@@ -30,7 +33,7 @@ def create_projection_matrix(odor_space, num_kenyon, projection):
 	else: assert False
 
 	assert M.shape[0] == num_kenyon
-	assert M.shape[1] == odor_space.shape[1]
+	#assert M.shape[1] == odor_space.shape[1]
 
 	return M
 
