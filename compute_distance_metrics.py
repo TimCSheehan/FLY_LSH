@@ -129,6 +129,7 @@ def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'euc',proj='SB4',
     mPRT = ' PROJ: %.2f %.2f, LSHBLOOM: %.2f %.2f, HBLOOM %.2f %.2f' %tuple(np.concatenate([m_1, m_2, m_3]))
     print(nam_str + m_0+ mPRT)
     
-    return (m_1[0],m_2[0],m_3[0])
+    return (nam_str + m_0+ mPRT)
+    # return (m_1[0],m_2[0],m_3[0])
     
     
