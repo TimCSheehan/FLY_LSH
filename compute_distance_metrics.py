@@ -60,7 +60,7 @@ def cor_fun(x1,x2):
     return np.round((a1,a2),2)
 
 def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'both',proj='SB4',app_str='',text_out=True,
-                        ORN_SPECIAL=False):
+                        ORN_SPECIAL=False,VERBOSE=0):
     # must specify either m and k or eps (FP rate)
     n_ex,l_ex,dIn = np.shape(S)
     if not m:
@@ -151,7 +151,10 @@ def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'both',proj='SB4'
         
     mPRT = str([m_1c,m_2c,m_3c])
     mPRT = ' PROJ: %.2f %.2f, LSHBLOOM: %.2f %.2f, HBLOOM %.2f %.2f' %tuple(np.concatenate([m_1c, m_2c, m_3c]))
-    print(nam_str + m_0c+ mPRT)
+    if VERBOSE==1:
+        print(nam_str + m_0c+ mPRT)
+    elif VERBOSE==2:
+        print(".",end=" ",flush=True)
     
     if text_out:
         return (nam_str + m_0c+ mPRT)
