@@ -16,6 +16,8 @@ def novelty_dist(S,q,dist_met):
     elif dist_met == 'euc':
         cs = np.min([euc_sim(s,q) for s in S])
     return cs
+def closest_ind(S,q): # to test ORN output
+    return np.argmax([cos_sim(s,q) for s in S])
 def cos_sim(a,b):
     return np.dot(a,b)/(np.sqrt(np.sum(a**2)) * np.sqrt(np.sum(b**2)))
 def euc_sim(a,b):
@@ -57,7 +59,8 @@ def cor_fun(x1,x2):
     a2 = kendalltau(x1,x2)[0]
     return np.round((a1,a2),2)
 
-def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'euc',proj='SB4',app_str=''):
+def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'both',proj='SB4',app_str='',text_out=True,
+                        ORN_SPECIAL=False,VERBOSE=0):
     # must specify either m and k or eps (FP rate)
     n_ex,l_ex,dIn = np.shape(S)
     if not m:
@@ -65,8 +68,6 @@ def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'euc',proj='SB4',
         k = opt_k(m,l_ex)
     if not eps:
         eps = e_eps(m,l_ex,k)
-        
-    N = [novelty_dist(S[i],q[i],dist_met) for i in range(n_ex)]
     
     if proj == 'DG':
         M = np.random.randn(dIn,m)
@@ -91,7 +92,7 @@ def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'euc',proj='SB4',
 
     # bloom filter
     Sm_LSH_bloom = np.sum(Sm_LSH_tag,axis=1)>0 
-    avg_hash_loc = np.mean(Sm_LSH_bloom,axis=0)
+    #avg_hash_loc = np.mean(Sm_LSH_bloom,axis=0)
     
     N_LSH_tag = [-(tag_cnt(Sm_LSH_tag[i],qm_LSH_tag[i])/k-1) for i in range(n_ex)]      # Normalized
     N_LSH_bloom = -(np.sum([Sm_LSH_bloom[i,qm_LSH[i]] for i in range(n_ex)],axis=1)/k-1)
@@ -108,8 +109,8 @@ def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'euc',proj='SB4',
          qm_hash_tag[i,ii] = 1
 
     # non-local bloom filter
-    Sm_hash_bloom = np.sum(Sm_hash_tag,axis=1)>0 
-    avg_hash_loc = np.mean(Sm_hash_bloom,axis=0)
+    Sm_hash_bloom = (np.sum(Sm_hash_tag,axis=1)>0)*1 # *1 to make an integer, not a boolean 
+    #avg_hash_loc = np.mean(Sm_hash_bloom,axis=0)
 
     # closest hash
     N_hash_tag = [-(tag_cnt(Sm_hash_tag[i],qm_hash_tag[i])/k-1) for i in range(n_ex)]     # Normalized
@@ -120,15 +121,46 @@ def get_distance_metrics(S,q,m=None,k=None,eps=None,dist_met = 'euc',proj='SB4',
     nam_str = (app_str + '_d1:' + str(dIn) + '_PROJ:' + proj + '_' + 
         dist_met + '_m:'+ str(m) +'_k:'+str(k)+'_eps:'+eps_str+'  ' )
     
-    m_0 = 'OGDIST:%.2f' %np.mean(N) # dist ORN space
-    m_1 = cor_fun(N,N_LSH_tag)
-    m_2 = cor_fun(N,N_LSH_bloom)
-    m_3 = cor_fun(N,N_hash_bloom)
+
+    if dist_met == 'both':
+        N_cos = [novelty_dist(S[i],q[i],'cos') for i in range(n_ex)]
+        N_euc = [novelty_dist(S[i],q[i],'euc') for i in range(n_ex)]
+        
+        m_0c = 'OGDIST:%.2f' %np.mean(N_cos) # dist ORN space
+        m_1c = cor_fun(N_cos,N_LSH_tag)
+        m_2c = cor_fun(N_cos,N_LSH_bloom)
+        m_3c = cor_fun(N_cos,N_hash_bloom)
+        
+        m_0e = 'OGDIST:%.2f' %np.mean(N_euc) # dist ORN space
+        m_1e = cor_fun(N_euc,N_LSH_tag)
+        m_2e = cor_fun(N_euc,N_LSH_bloom)
+        m_3e = cor_fun(N_euc,N_hash_bloom)
+    else:
+        N = [novelty_dist(S[i],q[i],dist_met) for i in range(n_ex)]
+        m_0c = 'OGDIST:%.2f' %np.mean(N) # dist ORN space
+        m_1c = cor_fun(N,N_LSH_tag)
+        m_2c = cor_fun(N,N_LSH_bloom)
+        m_3c = cor_fun(N,N_hash_bloom)
     
-    mPRT = str([m_1,m_2,m_3])
-    mPRT = ' PROJ: %.2f %.2f, LSHBLOOM: %.2f %.2f, HBLOOM %.2f %.2f' %tuple(np.concatenate([m_1, m_2, m_3]))
-    print(nam_str + m_0+ mPRT)
+    ## get quick ORN special [grab index that was closest in ORN space]
+    if ORN_SPECIAL:
+        ind_closest_ORN = [closest_ind(S[i],q[i]) for i in range(n_ex)]
+        ORN_SP_OUT = [-( np.sum(Sm_LSH_tag[i,ind_closest_ORN[i],qm_LSH[i]]) )/k-1 for i in range(n_ex)]
+        m_3c = cor_fun(N_cos,ORN_SP_OUT)
+        m_3e = cor_fun(N_euc,ORN_SP_OUT)
+        
+    mPRT = str([m_1c,m_2c,m_3c])
+    mPRT = ' PROJ: %.2f %.2f, LSHBLOOM: %.2f %.2f, HBLOOM %.2f %.2f' %tuple(np.concatenate([m_1c, m_2c, m_3c]))
+    if VERBOSE==1:
+        print(nam_str + m_0c+ mPRT)
+    elif VERBOSE==2:
+        print(".",end=" ",flush=True)
     
-    return (m_1[0],m_2[0],m_3[0])
+    if text_out:
+        return (nam_str + m_0c+ mPRT)
+    elif dist_met == 'both':
+        return(m_1c[0],m_1e[0],m_2c[0],m_2e[0],m_3c[0],m_3e[0])
+    else:
+        return (m_1c[0],m_2c[0],m_3c[0])
     
     
