@@ -12,10 +12,13 @@ def get_file_list():
     f_have = [fls[ff][len(str_string):-4] for ff in my_fls]
     return np.array(f_have)
 
-u_str = 'Erand'
-d1_want = np.array([20,40, 60, 100,200,300,400,500])
+# u_str = 'Erand'
+# d1_want = np.array([20,40, 60, 100,200,300,400,500])
+# n_want = np.array([50,100,150,200,300,400,500])
+# d_sets_want = [u_str + str(x1) + '_' + str(x2) for x1 in d1_want for x2 in n_want]
+u_str = 'MNIST'
 n_want = np.array([50,100,150,200,300,400,500])
-d_sets_want = [u_str + str(x1) + '_' + str(x2) for x1 in d1_want for x2 in n_want]
+d_sets_want = [u_str  + '_' + str(x2) for x2 in n_want]
 
 print('Planned Items:')
 for item in d_sets_want:
